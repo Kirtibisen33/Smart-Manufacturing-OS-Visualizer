@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OS Algorithm Visualizer – Smart Agriculture</title>
+<style>
+:root{--bg:#f6f8f5;--card:#fff;--tx:#1d2a1f;--mut:#5d6b60;--ac:#2e7d32;--bd:#d6dfd6;--ok:#2e7d32;--bad:#c62828;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121a14;--card:#1b261d;--tx:#e6efe7;--mut:#9fb0a2;--ac:#66bb6a;--bd:#2f3e32;--ok:#66bb6a;--bad:#ef5350}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,sans-serif}
+header{padding:16px 20px}h1{margin:0;font-size:20px}header p{margin:4px 0 0;color:var(--mut);font-size:13px}
+nav{display:flex;gap:6px;padding:0 20px;flex-wrap:wrap}
+nav button{border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:8px 14px;border-radius:8px;cursor:pointer;font:inherit}
+nav button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+main{padding:16px 20px;max-width:1000px}section{display:none}section.on{display:block}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h3{margin:0 0 8px;font-size:15px}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border:1px solid var(--bd);padding:4px 6px;text-align:center}th{background:var(--bg)}
+input,select{background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:4px 6px;font:inherit;width:70px}
+select{width:auto}td input{width:56px}
+.btn{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit;margin:2px}
+.btn.s{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
+.gantt{display:flex;margin:10px 0 2px;min-width:max-content}
+.g{height:38px;min-width:28px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;border-right:1px solid rgba(255,255,255,.4)}
+.tk{display:flex;min-width:max-content;font-size:11px;color:var(--mut)}.tk div{min-width:28px}
+.slots{display:flex;gap:8px;margin:8px 0}.slot{width:64px;height:48px;border:2px solid var(--bd);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--bg)}
+.slot.f{background:var(--ac);color:#fff;border-color:var(--ac)}
+.log{font:12px/1.5 ui-monospace,monospace;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px;height:170px;overflow:auto;white-space:pre-wrap}
+.mem{display:flex;border:2px solid var(--bd);border-radius:8px;overflow:hidden;min-width:600px;height:58px;margin:8px 0}
+.blk{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;border-right:2px solid var(--card);background:var(--bg);overflow:hidden}
+.blk.u{background:var(--ac);color:#fff}
+.safe{color:var(--ok);font-weight:600}.unsafe{color:var(--bad);font-weight:600}.mut{color:var(--mut);font-size:13px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0}
+</style></head><body>
+<header><h1>🌱 OS Algorithm Visualizer – Smart Agriculture &amp; Automated Irrigation</h1>
+<p>Problem 9 · CPU Scheduling · Producer–Consumer · Banker’s Algorithm · Memory Management</p></header>
+<nav id="nav"></nav>
+<main>
+
+<section id="cpu"><div class="card"><h3>Sensor-processing &amp; irrigation tasks (editable)</h3>
+<div class="wrap"><table id="ptab"><thead><tr><th>PID</th><th>Task</th><th>Arrival</th><th>Burst</th><th>Priority (low=high)</th></tr></thead><tbody></tbody></table></div>
+<div class="row">Algorithm <select id="alg"><option>FCFS</option><option>SJF (non-preemptive)</option><option>SRTF (preemptive)</option><option>Round Robin</option><option>Priority (non-preemptive)</option></select>
+Quantum <input id="q" type="number" value="2" min="1">
+<button class="btn" onclick="runCPU()">Run</button><button class="btn s" onclick="addP()">+ Task</button><button class="btn s" onclick="delP()">− Task</button></div></div>
+<div class="card"><h3>Gantt chart</h3><div class="wrap"><div id="gantt"></div><div id="tk" class="tk"></div></div></div>
+<div class="card"><h3>Results</h3><div class="wrap" id="cres"></div></div></section>
+
+<section id="pc"><div class="card"><h3>Sensor producers → bounded buffer (5 slots) → irrigation controller</h3>
+<p class="mut">Semaphores: <b>empty</b>=N, <b>full</b>=0, <b>mutex</b>=1. Producer: wait(empty) → wait(mutex) → insert → signal(mutex) → signal(full). Consumer: wait(full) → wait(mutex) → remove → signal(mutex) → signal(empty).</p>
+<div class="row">Buffer size <input id="bs" type="number" value="5" min="1" max="10">
+<button class="btn" onclick="pcInit()">Reset</button>
+<button class="btn" onclick="pcStep('P')">Produce (sensor)</button>
+<button class="btn" onclick="pcStep('C')">Consume (controller)</button>
+<button class="btn s" id="auto" onclick="pcAuto()">Auto-run</button></div>
+<div class="row"><span>empty = <b id="se">5</b></span><span>full = <b id="sf">0</b></span><span>mutex = <b id="sm">1</b></span></div>
+<div class="slots" id="slots"></div><div class="log" id="plog"></div></div></section>
+
+<section id="bk"><div class="card"><h3>Banker’s Algorithm – shared control resources</h3>
+<p class="mut">Resources: A = Water pumps, B = Valves, C = Sensor gateways. Tasks: P0 Soil-Moisture, P1 Temperature, P2 Weather, P3 Water-Level, P4 Irrigation Controller.</p>
+<div class="wrap"><table id="btab"></table></div>
+<div class="row">Available A,B,C <input id="av0" type="number" value="3"><input id="av1" type="number" value="3"><input id="av2" type="number" value="2">
+<button class="btn" onclick="safety()">Check safety</button></div>
+<div class="row">Request: process <select id="rp"></select> asks <input id="r0" type="number" value="1"><input id="r1" type="number" value="0"><input id="r2" type="number" value="2">
+<button class="btn" onclick="request()">Request resources</button></div></div>
+<div class="card"><h3>Result</h3><div id="bres"></div></div></section>
+
+<section id="mm"><div class="card"><h3>Memory partitions (KB) &amp; task memory requests</h3>
+<div class="row">Partitions <input id="parts" style="width:300px" value="100,500,200,300,600">
+Requests <input id="reqs" style="width:300px" value="212,417,112,426"></div>
+<div class="row">Algorithm <select id="ma"><option>First Fit</option><option>Best Fit</option><option>Worst Fit</option></select>
+<button class="btn" onclick="runMem()">Allocate</button><button class="btn s" onclick="cmpMem()">Compare all</button></div>
+<p class="mut">Requests are tasks e.g. sensor buffer, weather cache, irrigation model, logging.</p></div>
+<div class="card"><h3>Memory map</h3><div class="wrap" id="mmap"></div><div id="mres"></div></div></section>
+
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const tabs=[['cpu','CPU Scheduling'],['pc','Producer–Consumer'],['bk','Banker’s Algorithm'],['mm','Memory Management']];
+tabs.forEach(([id,t],i)=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>show(id);b.dataset.id=id;$('nav').appendChild(b)});
+function show(id){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.id==id))}
+show('cpu');
+const col=['#2e7d32','#1565c0','#ef6c00','#6a1b9a','#00838f','#ad1457','#558b2f','#4e342e'];
+
+/* ---------- CPU ---------- */
+let procs=[['Soil-moisture read',0,5,2],['Temperature read',1,3,3],['Weather fetch',2,8,4],['Water-level check',3,2,1],['Irrigation decision',4,6,2]];
+function drawP(){const tb=$('ptab').tBodyies||$('ptab').querySelector('tbody');tb.innerHTML='';
+procs.forEach((p,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>P${i}</td><td><input style="width:140px" value="${p[0]}" onchange="procs[${i}][0]=this.value"></td>`+[1,2,3].map(k=>`<td><input type="number" min="0" value="${p[k]}" onchange="procs[${i}][${k}]=+this.value"></td>`).join('');tb.appendChild(tr)})}
+function addP(){procs.push(['Task '+procs.length,procs.length,3,1]);drawP()}
+function delP(){if(procs.length>1){procs.pop();drawP()}}
+function schedule(alg,Q){
+ const n=procs.length,rem=procs.map(p=>p[2]),done=Array(n).fill(false),ct=Array(n).fill(0),tl=[];
+ let t=0,fin=0,rq=[],inq=Array(n).fill(false),cur=-1,qt=0;
+ const push=(i,s)=>{tl.push(i);};
+ while(fin<n&&t<1000){
+  if(alg=='Round Robin'){
+   for(let i=0;i<n;i++)if(!inq[i]&&procs[i][1]<=t){rq.push(i);inq[i]=true}
+   if(cur<0&&rq.length){cur=rq.shift();qt=0}
+   if(cur<0){tl.push(-1);t++;continue}
+   tl.push(cur);rem[cur]--;qt++;t++;
+   for(let i=0;i<n;i++)if(!inq[i]&&procs[i][1]<=t){rq.push(i);inq[i]=true}
+   if(rem[cur]==0){ct[cur]=t;done[cur]=true;fin++;cur=-1}else if(qt==Q){rq.push(cur);cur=-1}
+   continue}
+  const rdy=[...Array(n).keys()].filter(i=>!done[i]&&procs[i][1]<=t);
+  if(!rdy.length){tl.push(-1);t++;continue}
+  const key=i=>alg=='FCFS'?procs[i][1]:alg.startsWith('SJF')?rem[i]:alg=='SRTF'?rem[i]:procs[i][3];
+  if(alg=='SRTF'||cur<0||done[cur]){cur=rdy.sort((a,b)=>key(a)-key(b)||procs[a][1]-procs[b][1])[0]}
+  tl.push(cur);rem[cur]--;t++;
+  if(rem[cur]==0){ct[cur]=t;done[cur]=true;fin++;cur=-1}
+ }
+ return{tl,ct}}
+function runCPU(){
+ const alg=$('alg').value,{tl,ct}=schedule(alg,+$('q').value||2);
+ let g='',k='',i=0,pos=0;
+ while(i<tl.length){let j=i;while(j<tl.length&&tl[j]==tl[i])j++;
+  const w=(j-i)*28;g+=`<div class="g" style="width:${w}px;background:${tl[i]<0?'#9e9e9e':col[tl[i]%8]}">${tl[i]<0?'idle':'P'+tl[i]}</div>`;i=j}
+ for(let t=0;t<=tl.length;t++)k+=`<div>${t}</div>`;
+ $('gantt').innerHTML=`<div class="gantt">${g}</div>`;$('tk').innerHTML=k;
+ let r='<table><tr><th>PID</th><th>Task</th><th>AT</th><th>BT</th><th>CT</th><th>TAT</th><th>WT</th></tr>',sw=0,st=0;
+ procs.forEach((p,i)=>{const tat=ct[i]-p[1],wt=tat-p[2];sw+=wt;st+=tat;r+=`<tr><td>P${i}</td><td>${p[0]}</td><td>${p[1]}</td><td>${p[2]}</td><td>${ct[i]}</td><td>${tat}</td><td>${wt}</td></tr>`});
+ $('cres').innerHTML=r+`</table><p>Average waiting time = <b>${(sw/procs.length).toFixed(2)}</b> · Average turnaround time = <b>${(st/procs.length).toFixed(2)}</b> · Algorithm: ${alg}</p>`}
+
+/* ---------- Producer-Consumer ---------- */
+let buf,N,seq=0,timer=null,bmutex;
+function pcInit(){N=+$('bs').value||5;buf=[];seq=0;clearInterval(timer);timer=null;$('plog').textContent='';pcDraw()}
+function pcLog(s){const l=$('plog');l.textContent+=s+'\n';l.scrollTop=l.scrollHeight}
+function pcDraw(){$('se').textContent=N-buf.length;$('sf').textContent=buf.length;$('sm').textContent=1;
+ $('slots').innerHTML=Array.from({length:N},(_,i)=>`<div class="slot ${buf[i]?'f':''}">${buf[i]||'empty'}</div>`).join('')}
+const sensors=['Soil','Temp','Weather','Level'];
+function pcStep(w){
+ if(w=='P'){const s=sensors[seq%4]+'#'+(++seq);
+  if(buf.length==N){seq--;pcLog('⛔ Producer BLOCKED on wait(empty): buffer full ('+s+' waits)');return}
+  pcLog('Producer: wait(empty) ok → wait(mutex) → insert '+s+' → signal(mutex) → signal(full)');buf.push(s)}
+ else{if(!buf.length){pcLog('⛔ Consumer BLOCKED on wait(full): buffer empty');return}
+  pcLog('Consumer: wait(full) ok → wait(mutex) → remove '+buf[0]+' (FIFO) → irrigation decision → signal(mutex) → signal(empty)');buf.shift()}
+ pcDraw()}
+function pcAuto(){if(timer){clearInterval(timer);timer=null;$('auto').textContent='Auto-run';return}
+ $('auto').textContent='Stop';timer=setInterval(()=>pcStep(Math.random()<.55?'P':'C'),700)}
+
+/* ---------- Banker ---------- */
+const names=['Soil-Moisture','Temperature','Weather','Water-Level','Irrigation Ctrl'];
+let alloc=[[0,1,0],[2,0,0],[3,0,2],[2,1,1],[0,0,2]],maxm=[[7,5,3],[3,2,2],[9,0,2],[2,2,2],[4,3,3]];
+function drawB(){let h='<tr><th rowspan=2>Process</th><th colspan=3>Allocation</th><th colspan=3>Max</th><th colspan=3>Need</th></tr><tr>'+'<th>A</th><th>B</th><th>C</th>'.repeat(3)+'</tr>';
+ alloc.forEach((a,i)=>{h+=`<tr><td>P${i} ${names[i]}</td>`+a.map((v,j)=>`<td><input type="number" min="0" value="${v}" onchange="alloc[${i}][${j}]=+this.value;drawB()"></td>`).join('')+maxm[i].map((v,j)=>`<td><input type="number" min="0" value="${v}" onchange="maxm[${i}][${j}]=+this.value;drawB()"></td>`).join('')+a.map((v,j)=>`<td>${maxm[i][j]-v}</td>`).join('')+'</tr>'});
+ $('btab').innerHTML=h;$('rp').innerHTML=names.map((n,i)=>`<option value="${i}">P${i} ${n}</option>`).join('')}
+const avail=()=>[0,1,2].map(i=>+$('av'+i).value);
+function isSafe(av,al){const n=al.length,w=[...av],f=Array(n).fill(false),seqn=[],steps=[];
+ let prog=true;while(prog){prog=false;for(let i=0;i<n;i++){if(f[i])continue;const need=maxm[i].map((m,j)=>m-al[i][j]);
+  if(need.every((x,j)=>x<=w[j])){steps.push(`P${i}: Need [${need}] ≤ Work [${w}] → runs, releases [${al[i]}] → Work = [${w.map((x,j)=>x+al[i][j])}]`);
+   al[i].forEach((x,j)=>w[j]+=x);f[i]=true;seqn.push('P'+i);prog=true}}}
+ return{safe:f.every(Boolean),seq:seqn,steps}}
+function safety(){const r=isSafe(avail(),alloc);
+ $('bres').innerHTML=(r.safe?`<p class="safe">✔ SAFE state. Safe sequence: &lt; ${r.seq.join(' → ')} &gt;</p>`:`<p class="unsafe">✘ UNSAFE state – possible deadlock. Partial order: ${r.seq.join(', ')||'none'}</p>`)+'<div class="log" style="height:auto">'+r.steps.join('\n')+'</div>'}
+function request(){const i=+$('rp').value,rq=[0,1,2].map(j=>+$('r'+j).value),av=avail();let out='';
+ const need=maxm[i].map((m,j)=>m-alloc[i][j]);
+ if(rq.some((x,j)=>x>need[j]))out='<p class="unsafe">✘ Denied: request exceeds declared maximum claim (Request ≤ Need fails).</p>';
+ else if(rq.some((x,j)=>x>av[j]))out='<p class="unsafe">⏳ P'+i+' must WAIT: Request ≤ Available fails.</p>';
+ else{const na=av.map((x,j)=>x-rq[j]),nal=alloc.map(r=>[...r]);nal[i]=nal[i].map((x,j)=>x+rq[j]);
+  const r=isSafe(na,nal);
+  out=r.safe?`<p class="safe">✔ GRANTED: pretend-allocation leaves a safe state. Safe sequence: &lt; ${r.seq.join(' → ')} &gt;</p>`:'<p class="unsafe">✘ DENIED: granting would lead to an UNSAFE state (deadlock risk), so P'+i+' waits.</p>';
+  if(r.safe){alloc=nal;[0,1,2].forEach(j=>$('av'+j).value=na[j]);drawB()}}
+ $('bres').innerHTML=out}
+
+/* ---------- Memory ---------- */
+function alloc_mem(parts,reqs,alg){const free=[...parts],res=[];
+ reqs.forEach((r,i)=>{let idx=-1;
+  free.forEach((f,j)=>{if(f<r)return;if(idx<0||(alg=='First Fit'?false:alg=='Best Fit'?f<free[idx]:f>free[idx]))idx=j;if(alg=='First Fit'&&idx<0)idx=j});
+  if(alg=='First Fit'){idx=free.findIndex(f=>f>=r)}
+  res.push({r,idx,left:idx>=0?free[idx]-r:0});if(idx>=0)free[idx]-=r});return{res,free}}
+function runMem(){const parts=$('parts').value.split(',').map(Number),reqs=$('reqs').value.split(',').map(Number),alg=$('ma').value;
+ const {res,free}=alloc_mem(parts,reqs,alg);const tot=parts.reduce((a,b)=>a+b,0);
+ let used=parts.map(()=>[]);res.forEach((x,i)=>{if(x.idx>=0)used[x.idx].push([i,x.r])});
+ let h='<div class="mem">'+parts.map((p,j)=>{const u=used[j].reduce((a,b)=>a+b[1],0);
+  return `<div class="blk" style="width:${p/tot*100}%"><div class="blk u" style="width:100%;height:${u/p*100}%;border:0;min-height:${u?14:0}px">${used[j].map(x=>'R'+x[0]).join(',')}</div><div style="flex:1;display:flex;align-items:center">${p}KB${p-u?` (free ${p-u})`:''}</div></div>`}).join('')+'</div>';
+ let t='<table><tr><th>Request</th><th>Size</th><th>Partition</th><th>Internal leftover</th></tr>';
+ res.forEach((x,i)=>t+=`<tr><td>R${i}</td><td>${x.r}</td><td>${x.idx>=0?'#'+x.idx+' ('+parts[x.idx]+')':'<span class="unsafe">Not allocated</span>'}</td><td>${x.idx>=0?x.left:'-'}</td></tr>`);
+ $('mmap').innerHTML=h;$('mres').innerHTML=t+`</table><p>Total free memory left: <b>${free.reduce((a,b)=>a+b,0)} KB</b> in fragments [${free}]</p>`}
+function cmpMem(){const parts=$('parts').value.split(',').map(Number),reqs=$('reqs').value.split(',').map(Number);
+ let t='<table><tr><th>Algorithm</th><th>Allocated</th><th>Failed</th><th>Free fragments</th><th>Largest free block</th></tr>';
+ ['First Fit','Best Fit','Worst Fit'].forEach(a=>{const {res,free}=alloc_mem(parts,reqs,a);t+=`<tr><td>${a}</td><td>${res.filter(x=>x.idx>=0).length}/${reqs.length}</td><td>${res.filter(x=>x.idx<0).map(x=>x.r).join(',')||'none'}</td><td>[${free}]</td><td>${Math.max(...free)}</td></tr>`});
+ $('mmap').innerHTML='';$('mres').innerHTML=t+'</table>'}
+
+drawP();runCPU();pcInit();drawB();safety();runMem();
+</script></body></html>
